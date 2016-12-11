@@ -1,9 +1,10 @@
 {
-  "name": "capserino",
+  "name": "ilikeit",
   "version": "1.0.0",
   "description": "",
   "main": "go.js",
   "scripts": {
+    "start": "casperjs go.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
