@@ -1,7 +1,10 @@
 module.exports.accounts = [
     {
         login: 'bob@gmail.com',
-        password: 'foobar'
+        password: 'foobar',
+        allowReposts: 10,
+        allowLikes: 50,
+        acceptFriends: true,
     }
 ];
 

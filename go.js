@@ -62,6 +62,22 @@ function likeFirstMessage(url) {
     })
 }
 
+function repostFirstMessage(url) {
+    cs.thenOpen(url);
+    cs.waitForSelector('.post_share:not(.my_share)', function () {
+        this.click('.post_share:not(.my_share)');
+        this.waitForSelector('.like_share_btn', function () {
+            this.click('.like_share_btn')
+        });
+    }, function () {
+        this.echo('no repost button found');
+        this.capture('noLike.png')
+    });
+    cs.wait(_.random(1000, 5000), function () {
+        this.echo('done repost:' + url)
+    })
+}
+
 /**
  * Авторизация
  * @param login
@@ -77,6 +93,9 @@ function doAuth(login, password) {
     });
 }
 
+/**
+ * Разлогиниться
+ */
 function doLogout() {
     cs.waitForSelector('#top_profile_link', function () {
         this.click('#top_profile_link')
@@ -95,6 +114,19 @@ function doLogout() {
     });
 }
 
+/**
+ * Принять приглашение в друзья
+ */
+function acceptFriends() {
+    cs.thenOpen('https://vk.com/friends', function () {
+        this.waitForSelector('button[id^="accept_request_"]', function () {
+            this.click('button[id^="accept_request_"]');
+        }, function () {
+            this.echo('no new friends')
+        });
+    })
+}
+
 cs.start('https://vk.com/');
 
 _.each(config.accounts
@@ -104,16 +136,30 @@ _.each(config.accounts
             cs.echo('[START ACCOUNT: ' + account.login);
         });
 
-
         cs.then(function () {
+            //Авторизируемсы
             doAuth(account.login, account.password);
         });
-        _.each(config.pages,
-            function (link) {
+
+        _.each(config.pages, function (link) {
+            if (account.allowReposts && _.random(1, 100) < account.allowReposts) {
+                //Репостим
+                cs.then(function () {
+                    repostFirstMessage(link)
+                });
+            } else if (account.allowLikes && _.random(1, 100) < account.allowLikes) {
+                //Лайкаем
                 cs.then(function () {
                     likeFirstMessage(link);
                 });
-            });
+            }
+        });
+
+        if (account.acceptFriends) {
+            //Принимаем инвайты в друзья
+            acceptFriends();
+        }
+
 
         doLogout();
     });
