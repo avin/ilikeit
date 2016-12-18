@@ -1,9 +1,14 @@
 var casper = require('casper');
 var _ = require('lodash');
 var config = require('config');
+var fs = require('fs');
+
+var logObj = {
+    invitedFriends: {}
+};
 
 var cs = casper.create({
-    verbose: false,
+    verbose: true,
     logLevel: 'warning',
     pageSettings: {
         loadImages: false,
@@ -55,7 +60,7 @@ function likeFirstMessage(url) {
         this.click('.post_like._like_wrap:not(.my_like)');
     }, function () {
         this.echo('no like button found');
-        this.capture('noLike.png')
+        //this.capture('noLike.png')
     });
     cs.wait(_.random(1000, 5000), function () {
         this.echo('done:' + url)
@@ -71,7 +76,7 @@ function repostFirstMessage(url) {
         });
     }, function () {
         this.echo('no repost button found');
-        this.capture('noLike.png')
+        //this.capture('noLike.png')
     });
     cs.wait(_.random(1000, 5000), function () {
         this.echo('done repost:' + url)
@@ -100,17 +105,17 @@ function doLogout() {
     cs.waitForSelector('#top_profile_link', function () {
         this.click('#top_profile_link')
     }, function () {
-        this.capture('1.png')
+        //this.capture('1.png')
     });
     cs.waitForSelector('#top_logout_link', function () {
         this.click('#top_logout_link')
     }, function () {
-        this.capture('1.png')
+        //this.capture('1.png')
     });
     cs.waitForSelector('#quick_login', function () {
         this.echo('logout success');
     }, function () {
-        this.capture('1.png')
+        //this.capture('1.png')
     });
 }
 
@@ -127,10 +132,74 @@ function acceptFriends() {
     })
 }
 
-cs.start('https://vk.com/');
+/**
+ * Попроситься в друзья
+ * @param account
+ */
+function makeFriends(account) {
+    cs.then(function(){
+        if (logObj.invitedFriends[account.login] === undefined) {
+            logObj.invitedFriends[account.login] = []
+        }
 
-_.each(config.accounts
-    , function (account) {
+        var todayFriendsCount = 0;
+        logObj.invitedFriends[account.login].forEach(function (invitedFriend) {
+            if ((+new Date() - invitedFriend.invitedAt) < 86400000) {
+                todayFriendsCount++
+            }
+        });
+
+        config.newFriends.forEach(function (friendUrl) {
+
+            this.then(function () {
+                //Ищем не добавлен ли уже такой профиль в друзья
+                var alreadyInvited = _.find(logObj.invitedFriends[account.login], function (item) {
+                    return (item.friendUrl === friendUrl)
+                });
+
+                if (!alreadyInvited) {
+
+                    if (todayFriendsCount < config.options.friendsPerDayLimit) {
+
+                        console.log(friendUrl);
+
+                        this.thenOpen(friendUrl, function () {
+
+                            this.waitForSelector('#friend_status > div > button', function () {
+
+                                this.click('#friend_status > div > button');
+
+                                this.wait(1000);
+
+                                if (account.likeForNewFriend) {
+                                    likeFirstMessage(friendUrl)
+                                }
+
+                                todayFriendsCount++;
+                                console.log('invited ' + friendUrl);
+                                //Пишем в лог что добавили друга
+                                logObj.invitedFriends[account.login].push({
+                                    friendUrl: friendUrl,
+                                    invitedAt: (+new Date())
+                                });
+
+                            }, function () {
+                                this.capture('no_new_friend.png');
+                                this.echo('no accept friend button')
+                            });
+                        });
+                    }
+
+                }
+            });
+        }.bind(this))
+    })
+}
+
+function startCasper() {
+    cs.start('https://vk.com/');
+
+    _.each(config.accounts, function (account) {
 
         cs.then(function () {
             cs.echo('[START ACCOUNT: ' + account.login);
@@ -140,6 +209,11 @@ _.each(config.accounts
             //Авторизируемсы
             doAuth(account.login, account.password);
         });
+
+        //Добавляем друзей из списка
+        if (account.makeFriends) {
+            makeFriends(account);
+        }
 
         _.each(config.pages, function (link) {
             if (account.allowReposts && _.random(1, 100) < account.allowReposts) {
@@ -160,10 +234,26 @@ _.each(config.accounts
             acceptFriends();
         }
 
-
         doLogout();
     });
 
-cs.run(function () {
-    this.echo('DONE').exit()
-});
+    cs.run(function () {
+        this.echo('DONE').exit();
+        saveLogObj();
+    });
+}
+
+function saveLogObj() {
+    fs.write('log.data', JSON.stringify(logObj, null, 4), 'w');
+}
+
+try {
+    var data = fs.read('log.data');
+    logObj = JSON.parse(data);
+} catch (e) {
+    console.log('No log data. App will use new one...')
+}
+
+startCasper();
+
+
