@@ -89,13 +89,15 @@ function repostFirstMessage(url) {
  * @param password
  */
 function doAuth(login, password) {
-    cs.thenOpen('https://vk.com/');
-    cs.waitForSelector('form[name="login"]', function () {
-        this.fill('form[name="login"]', {
-            email: login,
-            pass: password,
-        }, true);
+    cs.thenOpen('https://vk.com/', function () {
+        cs.waitForSelector('form[name="login"]', function () {
+            this.fill('form[name="login"]', {
+                email: login,
+                pass: password,
+            }, true);
+        });
     });
+
 }
 
 /**
@@ -137,63 +139,64 @@ function acceptFriends() {
  * @param account
  */
 function makeFriends(account) {
-    cs.then(function(){
-        if (logObj.invitedFriends[account.login] === undefined) {
-            logObj.invitedFriends[account.login] = []
-        }
 
-        var todayFriendsCount = 0;
-        logObj.invitedFriends[account.login].forEach(function (invitedFriend) {
-            if ((+new Date() - invitedFriend.invitedAt) < 86400000) {
-                todayFriendsCount++
-            }
+    if (logObj.invitedFriends[account.login] === undefined) {
+        logObj.invitedFriends[account.login] = []
+    }
+
+    var todayFriendsCount = 0;
+    logObj.invitedFriends[account.login].forEach(function (invitedFriend) {
+        if ((+new Date() - invitedFriend.invitedAt) < 86400000) {
+            todayFriendsCount++
+        }
+    });
+
+    config.newFriends.forEach(function (friendUrl) {
+
+        //Ищем не добавлен ли уже такой профиль в друзья
+        var alreadyInvited = _.find(logObj.invitedFriends[account.login], function (item) {
+            return (item.friendUrl === friendUrl)
         });
 
-        config.newFriends.forEach(function (friendUrl) {
+        if (!alreadyInvited) {
 
-            this.then(function () {
-                //Ищем не добавлен ли уже такой профиль в друзья
-                var alreadyInvited = _.find(logObj.invitedFriends[account.login], function (item) {
-                    return (item.friendUrl === friendUrl)
-                });
+            if (todayFriendsCount < config.options.friendsPerDayLimit) {
+                cs.then(function () {
 
-                if (!alreadyInvited) {
+                    console.log(friendUrl);
 
-                    if (todayFriendsCount < config.options.friendsPerDayLimit) {
+                    this.thenOpen(friendUrl, function () {
 
-                        console.log(friendUrl);
+                        this.waitForSelector('#friend_status > div > button', function () {
 
-                        this.thenOpen(friendUrl, function () {
+                            this.click('#friend_status > div > button');
 
-                            this.waitForSelector('#friend_status > div > button', function () {
+                            this.wait(1000);
 
-                                this.click('#friend_status > div > button');
+                            if (account.likeForNewFriend) {
+                                likeFirstMessage(friendUrl)
+                            }
 
-                                this.wait(1000);
-
-                                if (account.likeForNewFriend) {
-                                    likeFirstMessage(friendUrl)
-                                }
-
-                                todayFriendsCount++;
+                            this.then(function () {
                                 console.log('invited ' + friendUrl);
                                 //Пишем в лог что добавили друга
                                 logObj.invitedFriends[account.login].push({
                                     friendUrl: friendUrl,
                                     invitedAt: (+new Date())
                                 });
-
-                            }, function () {
-                                this.capture('no_new_friend.png');
-                                this.echo('no accept friend button')
-                            });
+                            })
+                        }, function () {
+                            this.capture('no_new_friend.png');
+                            this.echo('no accept friend button')
                         });
-                    }
-
-                }
-            });
-        }.bind(this))
-    })
+                    }, function () {
+                        this.echo('wrong friendurl??')
+                    });
+                });
+                todayFriendsCount++;
+            }
+        }
+    });
 }
 
 function startCasper() {
@@ -202,7 +205,7 @@ function startCasper() {
     _.each(config.accounts, function (account) {
 
         cs.then(function () {
-            cs.echo('[START ACCOUNT: ' + account.login);
+            cs.echo('==== START ACCOUNT: ' + account.login + ' ====');
         });
 
         cs.then(function () {
@@ -214,27 +217,30 @@ function startCasper() {
         if (account.makeFriends) {
             makeFriends(account);
         }
-
-        _.each(config.pages, function (link) {
-            if (account.allowReposts && _.random(1, 100) < account.allowReposts) {
-                //Репостим
-                cs.then(function () {
-                    repostFirstMessage(link)
-                });
-            } else if (account.allowLikes && _.random(1, 100) < account.allowLikes) {
-                //Лайкаем
-                cs.then(function () {
-                    likeFirstMessage(link);
-                });
-            }
-        });
-
-        if (account.acceptFriends) {
-            //Принимаем инвайты в друзья
-            acceptFriends();
-        }
-
-        doLogout();
+        //
+        // cs.then(function () {
+        //     _.each(config.pages, function (link) {
+        //         if (account.allowReposts && _.random(1, 100) < account.allowReposts) {
+        //             //Репостим
+        //             this.then(function () {
+        //                 repostFirstMessage(link)
+        //             });
+        //         } else if (account.allowLikes && _.random(1, 100) < account.allowLikes) {
+        //             //Лайкаем
+        //             this.then(function () {
+        //                 likeFirstMessage(link);
+        //             });
+        //         }
+        //     }.bind(this));
+        // });
+        //
+        //
+        // if (account.acceptFriends) {
+        //     //Принимаем инвайты в друзья
+        //     acceptFriends();
+        // }
+        //
+        // doLogout();
     });
 
     cs.run(function () {
