@@ -1,3 +1,7 @@
+module.exports.options = {
+    friendsPerDayLimit: 20,
+};
+
 module.exports.accounts = [
     {
         login: 'bob@gmail.com',
