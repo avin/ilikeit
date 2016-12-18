@@ -217,30 +217,30 @@ function startCasper() {
         if (account.makeFriends) {
             makeFriends(account);
         }
-        //
-        // cs.then(function () {
-        //     _.each(config.pages, function (link) {
-        //         if (account.allowReposts && _.random(1, 100) < account.allowReposts) {
-        //             //Репостим
-        //             this.then(function () {
-        //                 repostFirstMessage(link)
-        //             });
-        //         } else if (account.allowLikes && _.random(1, 100) < account.allowLikes) {
-        //             //Лайкаем
-        //             this.then(function () {
-        //                 likeFirstMessage(link);
-        //             });
-        //         }
-        //     }.bind(this));
-        // });
-        //
-        //
-        // if (account.acceptFriends) {
-        //     //Принимаем инвайты в друзья
-        //     acceptFriends();
-        // }
-        //
-        // doLogout();
+        
+        cs.then(function () {
+            _.each(config.pages, function (link) {
+                if (account.allowReposts && _.random(1, 100) < account.allowReposts) {
+                    //Репостим
+                    this.then(function () {
+                        repostFirstMessage(link)
+                    });
+                } else if (account.allowLikes && _.random(1, 100) < account.allowLikes) {
+                    //Лайкаем
+                    this.then(function () {
+                        likeFirstMessage(link);
+                    });
+                }
+            }.bind(this));
+        });
+
+
+        if (account.acceptFriends) {
+            //Принимаем инвайты в друзья
+            acceptFriends();
+        }
+
+        doLogout();
     });
 
     cs.run(function () {
