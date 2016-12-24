@@ -1,5 +1,6 @@
 module.exports.options = {
-    friendsPerDayLimit: 20,
+    period: 28800000,
+    friendsPerPeriodLimit: 10,
 };
 
 module.exports.accounts = [

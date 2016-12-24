@@ -146,7 +146,7 @@ function makeFriends(account) {
 
     var todayFriendsCount = 0;
     logObj.invitedFriends[account.login].forEach(function (invitedFriend) {
-        if ((+new Date() - invitedFriend.invitedAt) < 86400000) {
+        if ((+new Date() - invitedFriend.invitedAt) < config.options.period) {
             todayFriendsCount++
         }
     });
@@ -160,7 +160,7 @@ function makeFriends(account) {
 
         if (!alreadyInvited) {
 
-            if (todayFriendsCount < config.options.friendsPerDayLimit) {
+            if (todayFriendsCount < config.options.friendsPerPeriodLimit) {
                 cs.then(function () {
 
                     console.log(friendUrl);
@@ -217,7 +217,7 @@ function startCasper() {
         if (account.makeFriends) {
             makeFriends(account);
         }
-        
+
         cs.then(function () {
             _.each(config.pages, function (link) {
                 if (account.allowReposts && _.random(1, 100) < account.allowReposts) {
